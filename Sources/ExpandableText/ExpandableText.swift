@@ -13,9 +13,15 @@ public struct ExpandableText: View {
     var onTap: (() -> Void)?
     
     /// onTap only is called if expanded or not truncated
-    public init(_ text: String, isExpanded: Binding<Bool>, onTap: (() -> Void)?) {
+    public init(
+        _ text: String,
+        isExpanded: Binding<Bool>,
+        expandButton: TextSet = TextSet(text: "more", font: .body, color: .blue),
+        onTap: (() -> Void)? = nil
+    ) {
         self.text = text
         self._isExpanded = isExpanded
+        self.expandButton = expandButton
         self.onTap = onTap
     }
 
@@ -23,7 +29,7 @@ public struct ExpandableText: View {
     var lineLimit = 3
     var foregroundColor = Color.primary
 
-    var expandButton = TextSet(text: "more", font: .body, color: .blue)
+    var expandButton: TextSet
     var collapseButton: TextSet?
     var animation: Animation?
     
