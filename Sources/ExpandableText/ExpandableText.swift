@@ -9,6 +9,12 @@ import SwiftUI
 
 public struct ExpandableText: View {
     var text: String
+    @Binding var isExpanded: Bool
+    
+    public init(_ text: String, isExpanded: Binding<Bool>) {
+        self.text = text
+        self._isExpanded = isExpanded
+    }
 
     var markdownText: AttributedString {
         (try? AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString()
@@ -23,27 +29,21 @@ public struct ExpandableText: View {
 
     var animation: Animation? = .none
 
-    @State private var expand: Bool = false
-    @State private var truncated: Bool = false
-    @State private var fullSize: CGFloat = 0
+    
+    @State private var isTruncated: Bool = false
+    @State private var maxHeight: CGFloat = 0
 
-    public init(text: String) {
-        self.text = text
-    }
+    
 
     public var body: some View {
         ZStack(alignment: .bottomTrailing) {
             Group {
-                if #available(iOS 15.0, *) {
-                    Text(markdownText)
-                } else {
-                    Text(text)
-                }
+                Text(markdownText)
             }
             .font(font)
             .foregroundColor(foregroundColor)
-            .lineLimit(expand == true ? nil : lineLimit)
-            .animation(animation, value: expand)
+            .lineLimit(isExpanded == true ? nil : lineLimit)
+            .animation(animation, value: isExpanded)
             .mask(
                 VStack(spacing: 0) {
                     Rectangle()
@@ -52,8 +52,8 @@ public struct ExpandableText: View {
                     HStack(spacing: 0) {
                         Rectangle()
                             .foregroundColor(.black)
-                        if truncated {
-                            if !expand {
+                        if isTruncated {
+                            if !isExpanded {
                                 HStack(alignment: .bottom, spacing: 0) {
                                     LinearGradient(
                                         gradient: Gradient(stops: [
@@ -92,30 +92,30 @@ public struct ExpandableText: View {
                 }
             )
 
-            if truncated {
-                if let collapseButton = collapseButton {
-                    Button(action: {
-                        self.expand.toggle()
-                    }, label: {
-                        Text(expand == false ? expandButton.text : collapseButton.text)
-                            .font(expand == false ? expandButton.font : collapseButton.font)
-                            .foregroundColor(expand == false ? expandButton.color : collapseButton.color)
-                    })
-                } else if !expand {
-                    Button(action: {
-                        self.expand = true
-                    }, label: {
+            if isTruncated {
+                if let collapseButton, isExpanded {
+                    Button {
+                        isExpanded = false
+                    } label: {
+                        Text(collapseButton.text)
+                            .font(collapseButton.font)
+                            .foregroundColor(collapseButton.color)
+                    }
+                } else if !isExpanded {
+                    Button {
+                        isExpanded = true
+                    } label: {
                         Text(expandButton.text)
                             .font(expandButton.font)
                             .foregroundColor(expandButton.color)
-                    })
+                    }
                 }
             }
         }
         .background(
             ZStack {
-                if !truncated {
-                    if fullSize != 0 {
+                if !isTruncated {
+                    if maxHeight != 0 {
                         Text(text)
                             .font(font)
                             .lineLimit(lineLimit)
@@ -123,8 +123,8 @@ public struct ExpandableText: View {
                                 GeometryReader { geo in
                                     Color.clear
                                         .onAppear {
-                                            if fullSize > geo.size.height {
-                                                self.truncated = true
+                                            if maxHeight > geo.size.height {
+                                                self.isTruncated = true
                                                 print(geo.size.height)
                                             }
                                         }
@@ -139,7 +139,7 @@ public struct ExpandableText: View {
                         .background(GeometryReader { geo in
                             Color.clear
                                 .onAppear {
-                                    self.fullSize = geo.size.height
+                                    self.maxHeight = geo.size.height
                                 }
                         })
                 }
