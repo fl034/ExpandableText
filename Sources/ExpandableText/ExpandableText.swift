@@ -10,88 +10,84 @@ import SwiftUI
 public struct ExpandableText: View {
     var text: String
     @Binding var isExpanded: Bool
+    var onTap: (() -> Void)?
     
-    public init(_ text: String, isExpanded: Binding<Bool>) {
+    /// onTap only is called if expanded or not truncated
+    public init(_ text: String, isExpanded: Binding<Bool>, onTap: (() -> Void)?) {
         self.text = text
         self._isExpanded = isExpanded
+        self.onTap = onTap
     }
+
+    var font = Font.body
+    var lineLimit = 3
+    var foregroundColor = Color.primary
+
+    var expandButton = TextSet(text: "more", font: .body, color: .blue)
+    var collapseButton: TextSet?
+    var animation: Animation?
+    
+    @State var isTruncated: Bool = false
+    @State var maxHeight: CGFloat = 0
 
     var markdownText: AttributedString {
-        (try? AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString()
+        (try? AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
     }
-
-    var font: Font = .body
-    var lineLimit: Int = 3
-    var foregroundColor: Color = .primary
-
-    var expandButton: TextSet = .init(text: "more", font: .body, color: .blue)
-    var collapseButton: TextSet? = nil
-
-    var animation: Animation? = .none
-
-    
-    @State private var isTruncated: Bool = false
-    @State private var maxHeight: CGFloat = 0
-
-    
 
     public var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Group {
-                Text(markdownText)
-            }
-            .font(font)
-            .foregroundColor(foregroundColor)
-            .lineLimit(isExpanded == true ? nil : lineLimit)
-            .animation(animation, value: isExpanded)
-            .mask(
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .foregroundColor(.black)
-
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .foregroundColor(.black)
-                        if isTruncated {
-                            if !isExpanded {
-                                HStack(alignment: .bottom, spacing: 0) {
-                                    LinearGradient(
-                                        gradient: Gradient(stops: [
-                                            Gradient.Stop(color: .black, location: 0),
-                                            Gradient.Stop(color: .clear, location: 0.8),
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                    .frame(width: 32, height: expandButton.text.heightOfString(usingFont: fontToUIFont(font: expandButton.font)))
-
-                                    Rectangle()
-                                        .foregroundColor(.clear)
-                                        .frame(width: expandButton.text.widthOfString(usingFont: fontToUIFont(font: expandButton.font)), alignment: .center)
-                                }
-                            } else if let collapseButton = collapseButton {
-                                HStack(alignment: .bottom, spacing: 0) {
-                                    LinearGradient(
-                                        gradient: Gradient(stops: [
-                                            Gradient.Stop(color: .black, location: 0),
-                                            Gradient.Stop(color: .clear, location: 0.8),
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                    .frame(width: 32, height: collapseButton.text.heightOfString(usingFont: fontToUIFont(font: collapseButton.font)))
-
-                                    Rectangle()
-                                        .foregroundColor(.clear)
-                                        .frame(width: collapseButton.text.widthOfString(usingFont: fontToUIFont(font: collapseButton.font)), alignment: .center)
+            Text(markdownText)
+                .font(font)
+                .foregroundColor(foregroundColor)
+                .lineLimit(isExpanded == true ? nil : lineLimit)
+                .animation(animation, value: isExpanded)
+                .mask(
+                    VStack(spacing: 0) {
+                        Rectangle().foregroundColor(.black)
+                        
+                        HStack(spacing: 0) {
+                            Rectangle().foregroundColor(.black)
+                            
+                            if isTruncated {
+                                if !isExpanded {
+                                    HStack(alignment: .bottom, spacing: 0) {
+                                        LinearGradient(
+                                            gradient: Gradient(stops: [
+                                                Gradient.Stop(color: .black, location: 0),
+                                                Gradient.Stop(color: .clear, location: 0.8),
+                                            ]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        .frame(width: 32, height: expandButton.text.heightOfString(usingFont: fontToUIFont(font: expandButton.font)))
+                                        
+                                        Rectangle()
+                                            .foregroundColor(.clear)
+                                            .frame(width: expandButton.text.widthOfString(usingFont: fontToUIFont(font: expandButton.font)), alignment: .center)
+                                    }
+                                } else if let collapseButton {
+                                    HStack(alignment: .bottom, spacing: 0) {
+                                        LinearGradient(
+                                            gradient: Gradient(stops: [
+                                                Gradient.Stop(color: .black, location: 0),
+                                                Gradient.Stop(color: .clear, location: 0.8),
+                                            ]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                        .frame(width: 32, height: collapseButton.text.heightOfString(usingFont: fontToUIFont(font: collapseButton.font)))
+                                        
+                                        Rectangle()
+                                            .foregroundColor(.clear)
+                                            .frame(width: collapseButton.text.widthOfString(usingFont: fontToUIFont(font: collapseButton.font)), alignment: .center)
+                                    }
                                 }
                             }
                         }
+                        .frame(height: expandButton.text.heightOfString(usingFont: fontToUIFont(font: font)))
                     }
-                    .frame(height: expandButton.text.heightOfString(usingFont: fontToUIFont(font: font)))
-                }
-            )
-
+                )
+            
             if isTruncated {
                 if let collapseButton, isExpanded {
                     Button {
@@ -100,7 +96,7 @@ public struct ExpandableText: View {
                         Text(collapseButton.text)
                             .font(collapseButton.font)
                             .foregroundColor(collapseButton.color)
-                    }
+                    }.allowsHitTesting(false)
                 } else if !isExpanded {
                     Button {
                         isExpanded = true
@@ -108,7 +104,7 @@ public struct ExpandableText: View {
                         Text(expandButton.text)
                             .font(expandButton.font)
                             .foregroundColor(expandButton.color)
-                    }
+                    }.allowsHitTesting(false)
                 }
             }
         }
@@ -131,20 +127,29 @@ public struct ExpandableText: View {
                                 }
                             )
                     }
-
+                    
                     Text(text)
                         .font(font)
                         .lineLimit(999)
                         .fixedSize(horizontal: false, vertical: true)
-                        .background(GeometryReader { geo in
-                            Color.clear
-                                .onAppear {
-                                    self.maxHeight = geo.size.height
-                                }
-                        })
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        self.maxHeight = geo.size.height
+                                    }
+                            }
+                        )
                 }
             }
-            .hidden()
+                .hidden()
         )
+        .onTapGesture {
+            if isTruncated && !isExpanded {
+                self.isExpanded = true
+            } else {
+                onTap?()
+            }
+        }
     }
 }
